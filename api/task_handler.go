@@ -64,7 +64,11 @@ func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 
 func (h *TaskHandler) ListTaskByID(w http.ResponseWriter, r *http.Request) {
 	taskId := mux.Vars(r)["id"]
-	task := h.service.GetTaskByIDFromDB(r.Context(), taskId)
+	task, err := h.service.GetTaskByIDFromDB(r.Context(), taskId)
+	if err != nil {
+		http.Error(w, err.Error(), 404)
+		return
+	}
 	respondWithJSON(w, http.StatusOK, task)
 }
 

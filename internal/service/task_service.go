@@ -34,10 +34,11 @@ func (s *TaskService) CreateTask(ctx context.Context, title, description string)
 		UpdatedAt:   time.Now(),
 	}
 
-	if err := s.repo.Create(ctx, task); err != nil {
+	resp, err := s.repo.Create(ctx, task)
+	if err != nil {
 		return nil, err
 	}
-	log.Printf("Successfully inserted task with ID: %s", task.ID)
+	log.Println("Successfully inserted task with ID: ", resp)
 	return task, nil
 }
 
@@ -45,6 +46,10 @@ func (s *TaskService) CreateTask(ctx context.Context, title, description string)
 func (s *TaskService) ListTasks(ctx context.Context) ([]*domain.Task, error) {
 	return s.repo.List(ctx)
 }
-func (s *TaskService) GetTaskByIDFromDB(ctx context.Context, taskID string) *domain.Task {
-	return s.repo.GetTaskByID(ctx, taskID)
+func (s *TaskService) GetTaskByIDFromDB(ctx context.Context, taskID string) (*domain.Task, error) {
+	task, err := s.repo.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
 }
