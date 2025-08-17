@@ -18,6 +18,8 @@ type TaskRepository interface {
 	Create(ctx context.Context, task *domain.Task) (string, error)
 	List(ctx context.Context) ([]*domain.Task, error)
 	GetTaskByID(ctx context.Context, taskID string) (*domain.Task, error)
+	UpdateInDb(ctx context.Context, taskID string, updates domain.TaskUpdate) error
+	DeleteFromDb(ctx context.Context, taskID string) error
 }
 
 // InMemoryTaskRepository implements TaskRepository interface with in-memory storage
@@ -75,4 +77,48 @@ func (r *InMemoryTaskRepository) GetTaskByID(ctx context.Context, taskID string)
 		return nil, domain.ErrTaskNotFound
 	}
 	return result, nil
+}
+
+func (r *InMemoryTaskRepository) DeleteFromDb(ctx context.Context, taskID string) error {
+	_, err := tasksDB.DeleteOne(ctx, bson.D{{Key: "id", Value: taskID}})
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func (r *InMemoryTaskRepository) UpdateInDb(ctx context.Context, taskID string, updates domain.TaskUpdate) error {
+	filter := bson.D{{Key: "id", Value: taskID}}
+
+	// Convert updates to bson.D
+	updateFields := bson.D{}
+	
+	if updates.Title != nil {
+		updateFields = append(updateFields, bson.E{Key: "title", Value: *updates.Title})
+	}
+	if updates.Description != nil {
+		updateFields = append(updateFields, bson.E{Key: "description", Value: *updates.Description})
+	}
+	if updates.Status != nil {
+		updateFields = append(updateFields, bson.E{Key: "status", Value: *updates.Status})
+	}
+
+	// update the updated_at timestamp
+	updateFields = append(updateFields, bson.E{Key: "updated_at", Value: time.Now()})
+
+	update := bson.D{{Key: "$set", Value: updateFields}}
+
+	result, err := tasksDB.UpdateOne(ctx, filter, update)
+	if err != nil {
+		log.Printf("Error updating task: %v\n", err)
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		log.Printf("No task found with ID: %s\n", taskID)
+		return domain.ErrTaskNotFound
+	}
+
+	return nil
 }

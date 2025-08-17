@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"task-management/internal/domain"
 	"task-management/internal/service"
 
 	"github.com/gorilla/mux"
@@ -25,6 +26,9 @@ func (h *TaskHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/tasks", h.CreateTask).Methods("POST")
 	router.HandleFunc("/tasks", h.ListTasks).Methods("GET")
 	router.HandleFunc("/tasks/{id}", h.ListTaskByID).Methods("GET")
+	router.HandleFunc("/tasks/{id}", h.UpdateTask).Methods("PUT")
+	router.HandleFunc("/tasks/{id}", h.DeleteTask).Methods("DELETE")
+	router.HandleFunc("/tasks/{id}", h.UpdateTaskStatus).Methods("PATCH")
 }
 
 
@@ -70,6 +74,74 @@ func (h *TaskHandler) ListTaskByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondWithJSON(w, http.StatusOK, task)
+}
+
+func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	var updates domain.TaskUpdate
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.UpdateTask(r.Context(), id, updates); err != nil {
+		if err == domain.ErrTaskNotFound {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the updated task to return in response
+	task, err := h.service.GetTaskByIDFromDB(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, task)
+}
+
+// DeleteTask handles task deletion requests
+func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	if err := h.service.DeleteTask(r.Context(), id); err != nil {
+		if err == domain.ErrTaskNotFound {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+func (h *TaskHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	var req struct {
+		Status string `json:"status"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.UpdateTaskStatus(r.Context(), id, req.Status); err != nil {
+		if err == domain.ErrTaskNotFound {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if err == domain.ErrInvalidNewStatus {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func respondWithJSON(w http.ResponseWriter, status int, data interface{}) {
