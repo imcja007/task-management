@@ -31,7 +31,6 @@ func (s *TaskService) CreateTask(ctx context.Context, title, description string)
 		Description: description,
 		Status:      "pending",
 		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
 	}
 
 	resp, err := s.repo.Create(ctx, task)
