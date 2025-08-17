@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,6 +27,7 @@ func NewTaskHandler(service *service.TaskService) *TaskHandler {
 
 func (h *TaskHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/tasks", h.CreateTask).Methods("POST")
+	router.HandleFunc("/random-tasks", h.CreateRandomTask).Methods("POST")
 	router.HandleFunc("/tasks", h.ListTasks).Methods("GET")
 	router.HandleFunc("/tasks/{id}", h.ListTaskByID).Methods("GET")
 	router.HandleFunc("/tasks/{id}", h.UpdateTask).Methods("PUT")
@@ -179,32 +182,32 @@ func respondWithJSON(w http.ResponseWriter, status int, data interface{}) {
 
 //	Uncomment to insert random tasks.
 
-// func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) CreateRandomTask(w http.ResponseWriter, r *http.Request) {
 
-// 	resp, err := http.Get("https://dummyjson.com/todos/random")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer resp.Body.Close()
+	resp, err := http.Get("https://dummyjson.com/todos/random")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
 
-// 	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
-// 	var result map[string]interface{}
-// 	if err := json.Unmarshal(body, &result); err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	task, err := h.service.CreateTask(r.Context(), result["todo"].(string), result["todo"].(string))
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		log.Fatal(err)
+	}
+	task, err := h.service.CreateTask(r.Context(), result["todo"].(string), result["todo"].(string))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-// 	response := map[string]interface{}{
-// 		"message": "Record Successfully Created",
-// 		"task":    task,
-// 	}
-// 	respondWithJSON(w, http.StatusCreated, response)
-// }
+	response := map[string]interface{}{
+		"message": "Record Successfully Created",
+		"task":    task,
+	}
+	respondWithJSON(w, http.StatusCreated, response)
+}
 
 
 //	create 20 tasks

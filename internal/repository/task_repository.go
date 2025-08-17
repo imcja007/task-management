@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"log"
+	"os"
 	"task-management/internal/domain"
 	"time"
 
@@ -30,9 +31,16 @@ func NewInMemoryTaskRepository() *InMemoryTaskRepository {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, _ := mongo.Connect(ctx, clientOptions)
-	tasksDB = client.Database("task_db").Collection("tasks")
+	mongoURI := os.Getenv("MONGO_URI")
+	if mongoURI == "" {
+		log.Fatal("MONGO_URI environment variable is not set")
+	}
+	clientOptions := options.Client().ApplyURI(mongoURI)
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		log.Fatal("Failed to connect to MongoDB:", err)
+	}
+	tasksDB = client.Database("taskdb").Collection("tasks")
 	return &InMemoryTaskRepository{}
 }
 
@@ -110,7 +118,7 @@ func (r *InMemoryTaskRepository) UpdateInDb(ctx context.Context, taskID string, 
 
 	// Convert updates to bson.D
 	updateFields := bson.D{}
-	
+
 	if updates.Title != nil {
 		updateFields = append(updateFields, bson.E{Key: "title", Value: *updates.Title})
 	}
@@ -135,6 +143,8 @@ func (r *InMemoryTaskRepository) UpdateInDb(ctx context.Context, taskID string, 
 	if result.MatchedCount == 0 {
 		log.Printf("No task found with ID: %s\n", taskID)
 		return domain.ErrTaskNotFound
+	} else {
+		log.Println("Successfully updated task with ID: ", taskID)
 	}
 
 	return nil

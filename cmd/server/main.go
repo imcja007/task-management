@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"task-management/api"
 	"task-management/internal/repository"
@@ -23,9 +25,15 @@ func main() {
 	router := mux.NewRouter()
 	taskHandler.RegisterRoutes(router)
 
+	// Get port from environment variable
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // default port if not specified
+	}
+
 	// Start server
-	log.Println("Starting server on :8080")
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	log.Printf("Starting server on port %s\n", port)
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), router); err != nil {
 		log.Fatal(err)
 	}
 }
