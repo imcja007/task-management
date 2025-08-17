@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: task-service-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: taskdb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - task-network
+
+  task-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task-service-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017/taskdb?authSource=admin
+      - PORT=8080
+      - ENV=production
+    depends_on:
+      - mongodb
+    networks:
+      - task-network
+    # Uncomment the following lines if you want to wait for MongoDB to be ready
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  task-network:
+    driver: bridge
