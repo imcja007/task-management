@@ -29,7 +29,7 @@ func (s *TaskService) CreateTask(ctx context.Context, title, description string)
 		ID:          uuid.New().String(),
 		Title:       title,
 		Description: description,
-		Status:      "pending",
+		Status:      domain.StatusPending,
 		CreatedAt:   time.Now(),
 	}
 
@@ -70,14 +70,10 @@ func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 }
 
 func (s *TaskService) UpdateTaskStatus(ctx context.Context, id, status string) error {
-	const (
-		StatusPending    = "pending"
-		StatusInProgress = "in_progress"
-		StatusCompleted  = "completed"
-	)
+
 
 	// Validate status
-	validStatus := status == StatusPending || status == StatusInProgress || status == StatusCompleted
+	validStatus := status == domain.StatusPending || status == domain.StatusInProgress || status == domain.StatusCompleted
 	if !validStatus {
 		return domain.ErrInvalidNewStatus
 	}
