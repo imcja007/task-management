@@ -16,7 +16,7 @@ var tasksDB *mongo.Collection
 // TaskRepository defines the interface for task storage operations
 type TaskRepository interface {
 	Create(ctx context.Context, task *domain.Task) (string, error)
-	List(ctx context.Context) ([]*domain.Task, error)
+	List(ctx context.Context, status string) ([]*domain.Task, error)
 	GetTaskByID(ctx context.Context, taskID string) (*domain.Task, error)
 	UpdateInDb(ctx context.Context, taskID string, updates domain.TaskUpdate) error
 	DeleteFromDb(ctx context.Context, taskID string) error
@@ -46,9 +46,13 @@ func (r *InMemoryTaskRepository) Create(ctx context.Context, task *domain.Task) 
 	return task.ID, nil
 }
 
-// List returns all tasks
-func (r *InMemoryTaskRepository) List(ctx context.Context) ([]*domain.Task, error) {
-	cursor, err := tasksDB.Find(ctx, bson.M{})
+// List returns tasks, optionally filtered by status
+func (r *InMemoryTaskRepository) List(ctx context.Context, status string) ([]*domain.Task, error) {
+	filter := bson.M{}
+	if status != "" {
+		filter["status"] = status
+	}
+	cursor, err := tasksDB.Find(ctx, filter)
 	if err != nil {
 		log.Println(err)
 		return nil, domain.ErrTaskNotFound

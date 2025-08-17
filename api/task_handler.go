@@ -33,7 +33,7 @@ func (h *TaskHandler) RegisterRoutes(router *mux.Router) {
 
 
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
-	var req struct {
+var req struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
 	}
@@ -57,7 +57,8 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.service.ListTasks(r.Context())
+	status := r.URL.Query().Get("status")
+	tasks, err := h.service.ListTasks(r.Context(), status)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -149,3 +150,32 @@ func respondWithJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
 }
+
+//	Uncomment to insert random todo.
+
+// func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+
+// 	resp, err := http.Get("https://dummyjson.com/todos/random")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	body, _ := io.ReadAll(resp.Body)
+
+// 	var result map[string]interface{}
+// 	if err := json.Unmarshal(body, &result); err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	task, err := h.service.CreateTask(r.Context(), result["todo"].(string), result["todo"].(string))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	response := map[string]interface{}{
+// 		"message": "Record Successfully Created",
+// 		"task":    task,
+// 	}
+// 	respondWithJSON(w, http.StatusCreated, response)
+// }

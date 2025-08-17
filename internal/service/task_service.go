@@ -41,9 +41,9 @@ func (s *TaskService) CreateTask(ctx context.Context, title, description string)
 	return task, nil
 }
 
-// ListTasks returns all tasks
-func (s *TaskService) ListTasks(ctx context.Context) ([]*domain.Task, error) {
-	return s.repo.List(ctx)
+// ListTasks returns tasks, optionally filtered by status
+func (s *TaskService) ListTasks(ctx context.Context, status string) ([]*domain.Task, error) {
+	return s.repo.List(ctx, status)
 }
 
 func (s *TaskService) GetTaskByIDFromDB(ctx context.Context, taskID string) (*domain.Task, error) {
