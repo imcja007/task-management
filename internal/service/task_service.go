@@ -45,3 +45,6 @@ func (s *TaskService) CreateTask(ctx context.Context, title, description string)
 func (s *TaskService) ListTasks(ctx context.Context) ([]*domain.Task, error) {
 	return s.repo.List(ctx)
 }
+func (s *TaskService) GetTaskByIDFromDB(ctx context.Context, taskID string) *domain.Task {
+	return s.repo.GetTaskByID(ctx, taskID)
+}

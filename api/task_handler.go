@@ -24,6 +24,7 @@ func NewTaskHandler(service *service.TaskService) *TaskHandler {
 func (h *TaskHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/tasks", h.CreateTask).Methods("POST")
 	router.HandleFunc("/tasks", h.ListTasks).Methods("GET")
+	router.HandleFunc("/tasks/{id}", h.ListTaskByID).Methods("GET")
 }
 
 
@@ -44,7 +45,11 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, task)
+	response := map[string]interface{}{
+		"message": "Record Successfully Created",
+		"task":    task,
+	}
+	respondWithJSON(w, http.StatusCreated, response)
 }
 
 func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +61,13 @@ func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, tasks)
 }
+
+func (h *TaskHandler) ListTaskByID(w http.ResponseWriter, r *http.Request) {
+	taskId := mux.Vars(r)["id"]
+	task := h.service.GetTaskByIDFromDB(r.Context(), taskId)
+	respondWithJSON(w, http.StatusOK, task)
+}
+
 func respondWithJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

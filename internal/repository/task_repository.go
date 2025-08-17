@@ -11,6 +11,7 @@ import (
 type TaskRepository interface {
 	Create(ctx context.Context, task *domain.Task) error
 	List(ctx context.Context) ([]*domain.Task, error)
+	GetTaskByID(ctx context.Context, taskID string) *domain.Task
 }
 
 // InMemoryTaskRepository implements TaskRepository interface with in-memory storage
@@ -43,4 +44,11 @@ func (r *InMemoryTaskRepository) List(ctx context.Context) ([]*domain.Task, erro
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
+}
+
+func (r *InMemoryTaskRepository) GetTaskByID(ctx context.Context, taskID string) *domain.Task {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	task := r.tasks[taskID]
+	return task
 }
