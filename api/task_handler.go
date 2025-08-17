@@ -35,9 +35,8 @@ func (h *TaskHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/tasks/{id}", h.UpdateTaskStatus).Methods("PATCH")
 }
 
-
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
-var req struct {
+	var req struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
 	}
@@ -62,17 +61,17 @@ var req struct {
 
 func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
-	
+
 	// Parse pagination parameters
-	page := 1 // default page
+	page := 1      // default page
 	pageSize := 10 // default page size
-	
+
 	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
 		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
 			page = p
 		}
 	}
-	
+
 	if pageSizeStr := r.URL.Query().Get("pageSize"); pageSizeStr != "" {
 		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
 			pageSize = ps
@@ -88,7 +87,7 @@ func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"data": tasks,
 		"pagination": map[string]interface{}{
-			"page": page,
+			"page":     page,
 			"pageSize": pageSize,
 		},
 	}
@@ -144,8 +143,11 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	response := map[string]interface{}{
+		"message": "Record Successfully deleted",
+	}
+	respondWithJSON(w, http.StatusNoContent, response)
 
-	w.WriteHeader(http.StatusNoContent)
 }
 func (h *TaskHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -170,8 +172,10 @@ func (h *TaskHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
+	response := map[string]interface{}{
+		"message": "Record Successfully updated",
+	}
+	respondWithJSON(w, http.StatusOK, response)
 }
 
 func respondWithJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -209,7 +213,6 @@ func (h *TaskHandler) CreateRandomTask(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, response)
 }
 
-
 //	create 20 tasks
 // func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 // 	var tasks []*domain.Task
@@ -219,9 +222,9 @@ func (h *TaskHandler) CreateRandomTask(w http.ResponseWriter, r *http.Request) {
 // 			log.Printf("Error fetching todo #%d: %v", i+1, err)
 // 			http.Error(w, "Error fetching todos", http.StatusInternalServerError)
 // 			return
-// 		}	
+// 		}
 // 		body, err := io.ReadAll(resp.Body)
-// 		resp.Body.Close()	
+// 		resp.Body.Close()
 // 		if err != nil {
 // 			log.Printf("Error reading response body for todo #%d: %v", i+1, err)
 // 			http.Error(w, "Error reading response", http.StatusInternalServerError)
