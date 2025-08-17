@@ -171,7 +171,7 @@ The easiest way to run the Task Management System is using Docker Compose, which
 
 1. **Clone the repository:**
 ```bash
-git clone <repository-url>
+git clone https://github.com/imcja007/task-management.git
 cd task-management
 ```
 
