@@ -1,4 +1,4 @@
- # ✅ Task Management System
+# ✅ Task Management System
 
 A RESTful microservice for managing tasks built with Go, MongoDB, and following microservices architecture principles.
 
@@ -8,9 +8,12 @@ A RESTful microservice for managing tasks built with Go, MongoDB, and following 
 - [🏗️ Architecture Overview](#️-architecture-overview)
 - [🧠 Microservices Concepts](#-microservices-concepts)
 - [🚀 Getting Started](#-getting-started)
+- [🐳 Docker Setup](#-docker-setup)
 - [📘 API Documentation](#-api-documentation)
 - [📈 Scalability](#-scalability)
-  
+- [🔄 Inter-Service Communication](#-inter-service-communication)
+
+
 ## 🔍 Problem Breakdown
 
 The Task Management System addresses the need for a scalable, maintainable service to handle basic CRUD operations on tasks. The key requirements addressed are:
@@ -34,6 +37,7 @@ The Task Management System addresses the need for a scalable, maintainable servi
 - **MongoDB** 🗃️: NoSQL database for flexible document storage
 - **Gorilla Mux** 🔄: HTTP router for clean route handling
 - **UUID** 🔑: Unique identifier generation for tasks
+- **Docker** 🐳: Containerization for easy deployment and scaling
 
 ### 📊 Data Model
 ```go
@@ -70,6 +74,8 @@ Tasks support three statuses:
 │   │   └── task_service.go
 │   └── repository/      # Data access layer
 │       └── task_repository.go
+├── Dockerfile           # Container configuration
+├── docker-compose.yml   # Multi-service orchestration
 ├── go.mod
 └── go.sum
 ```
@@ -115,10 +121,15 @@ This allows for:
 ## 🚀 Getting Started
 
 ### 📋 Prerequisites
-- Go 1.25 or higher
-- MongoDB instance (local or remote)
+- **Option 1 (Docker)**: Docker and Docker Compose
+- **Option 2 (Manual)**: Go 1.25+ and MongoDB instance
 
 ### 💿 Installation
+
+#### Option 1: Docker Setup (Recommended)
+See the [🐳 Docker Setup](#-docker-setup) section below for the easiest way to get started.
+
+#### Option 2: Manual Setup
 
 1. Clone the repository:
 ```bash
@@ -131,7 +142,12 @@ cd task-management
 go mod tidy
 ```
 
-3. Start MongoDB:
+3. Set environment variables:
+```bash
+export MONGO_URI="mongodb://localhost:27017/taskdb"
+```
+
+4. Start MongoDB:
 ```bash
 # Using Docker
 docker run --name mongodb -p 27017:27017 -d mongo:latest
@@ -140,16 +156,127 @@ docker run --name mongodb -p 27017:27017 -d mongo:latest
 mongod
 ```
 
-4. Run the service:
+5. Run the service:
 ```bash
 go run cmd/server/main.go
 ```
 
 The service will start on port 8080.
 
+## 🐳 Docker Setup
+
+The easiest way to run the Task Management System is using Docker Compose, which will automatically set up both the application and MongoDB.
+
+### 🚀 Quick Start with Docker
+
+1. **Clone the repository:**
+```bash
+git clone <repository-url>
+cd task-management
+```
+
+2. **Start the services:**
+```bash
+docker-compose up -d
+```
+
+This command will:
+- Build the Go application container
+- Start a MongoDB container with authentication
+- Set up a network for communication between services
+- Expose the API on port 8080
+
+3. **Verify the services are running:**
+```bash
+docker-compose ps
+```
+
+You should see output similar to:
+```
+NAME                   COMMAND                  SERVICE      STATUS        PORTS
+task-service-app       "go run cmd/server/m…"   task-service running       0.0.0.0:8080->8080/tcp
+task-service-mongodb   "docker-entrypoint.s…"   mongodb      running       0.0.0.0:27017->27017/tcp
+```
+
+4. **Test the API:**
+```bash
+curl http://localhost:8080/tasks
+```
+
+5. **View logs (optional):**
+```bash
+# View all logs
+docker-compose logs
+
+# View only app logs
+docker-compose logs task-service
+
+# Follow logs in real-time
+docker-compose logs -f
+```
+
+### 🛑 Stop the Services
+
+```bash
+# Stop services but keep data
+docker-compose down
+
+# Stop services and remove data volumes
+docker-compose down -v
+```
+
+### 🔧 Docker Configuration Details
+
+The `docker-compose.yml` file includes:
+
+**MongoDB Service:**
+- Image: `mongo:7.0`
+- Port: `27017`
+- Authentication: username `admin`, password `password123`
+- Database: `taskdb`
+- Persistent data storage with volumes
+
+**Task Service:**
+- Built from local Dockerfile
+- Port: `8080`
+- Environment variables automatically configured
+- Waits for MongoDB to be ready
+- Connected via internal Docker network
+
+### 🐳 Manual Docker Commands
+
+If you prefer to build and run containers manually:
+
+```bash
+# Build the application image
+docker build -t task-management .
+
+# Create a network
+docker network create task-network
+
+# Run MongoDB
+docker run -d --name mongodb \
+  --network task-network \
+  -e MONGO_INITDB_ROOT_USERNAME=admin \
+  -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+  -e MONGO_INITDB_DATABASE=taskdb \
+  -p 27017:27017 \
+  mongo:7.0
+
+# Run the application
+docker run -d --name task-service \
+  --network task-network \
+  -e MONGO_URI="mongodb://admin:password123@mongodb:27017/taskdb?authSource=admin" \
+  -p 8080:8080 \
+  task-management
+```
+
 ### ⚙️ Configuration
 
-The service currently connects to MongoDB at `mongodb://localhost:27017`. To change this, modify the connection string in `internal/repository/task_repository.go`.
+The service uses environment variables for configuration:
+- `MONGO_URI`: MongoDB connection string (required)
+- `PORT`: Server port (default: 8080)
+- `ENV`: Environment (development/production)
 
 ## 📘 API Documentation
 
@@ -183,13 +310,35 @@ Content-Type: application/json
 }
 ```
 
+#### 🎲 Create Random Task
+```http
+POST /random-tasks
+```
+
+**Description:** Creates a random task by fetching data from an external API (dummyjson.com). This endpoint is useful for testing and populating the database with sample data.
+
+**Response:**
+```json
+{
+    "message": "Record Successfully Created",
+    "task": {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "title": "Random task from external API",
+        "description": "Random task from external API",
+        "status": "pending",
+        "created_at": "2023-12-07T10:35:00Z",
+        "updated_at": "0001-01-01T00:00:00Z"
+    }
+}
+```
+
 #### 📋 List Tasks
 ```http
 GET /tasks?status=pending&page=1&pageSize=10
 ```
 
 **Query Parameters:**
-- `status` (optional): Filter by task status (pending, in_progress, completed)
+- `status` (optional): Filter by task status (`pending`, `in_progress`, `completed`)
 - `page` (optional): Page number (default: 1)
 - `pageSize` (optional): Items per page (default: 10)
 
@@ -254,14 +403,24 @@ Content-Type: application/json
 }
 ```
 
-**Response:** 200 OK (no body)
+**Response:**
+```json
+{
+    "message": "Record Successfully updated"
+}
+```
 
 #### 🗑️ Delete Task
 ```http
 DELETE /tasks/{id}
 ```
 
-**Response:** 204 No Content
+**Response:**
+```json
+{
+    "message": "Record Successfully deleted"
+}
+```
 
 ### ⚠️ Error Responses
 
@@ -286,6 +445,37 @@ DELETE /tasks/{id}
 }
 ```
 
+### 🧪 API Testing Examples
+
+You can test the API using curl commands:
+
+```bash
+# Create a new task
+curl -X POST http://localhost:8080/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Test Task", "description": "This is a test task"}'
+
+# Create a random task
+curl -X POST http://localhost:8080/random-tasks
+
+# List all tasks
+curl http://localhost:8080/tasks
+
+# List tasks with filtering and pagination
+curl "http://localhost:8080/tasks?status=pending&page=1&pageSize=5"
+
+# Get a specific task (replace {id} with actual task ID)
+curl http://localhost:8080/tasks/{id}
+
+# Update task status
+curl -X PATCH http://localhost:8080/tasks/{id} \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed"}'
+
+# Delete a task
+curl -X DELETE http://localhost:8080/tasks/{id}
+```
+
 ## 📈 Scalability
 
 ### 🔄 Horizontal Scaling
@@ -296,25 +486,12 @@ The service is designed for horizontal scaling:
 2. **Database Separation**: Data persistence is externalized to MongoDB
 3. **Load Balancer Ready**: Multiple instances can run behind a load balancer
 4. **Context-Aware**: All operations use context for timeout and cancellation
+5. **Containerized**: Docker containers make scaling easy
 
 ### 🛠️ Scaling Strategies
 
-#### 🐳 Container Deployment
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go mod download
-RUN go build -o task-service cmd/server/main.go
+#### 🐳 Container Orchestration with Kubernetes
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/task-service .
-CMD ["./task-service"]
-```
-
-#### ☸️ Kubernetes Deployment
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -332,15 +509,195 @@ spec:
     spec:
       containers:
       - name: task-service
-        image: task-service:latest
+        image: task-management:latest
         ports:
         - containerPort: 8080
         env:
         - name: MONGO_URI
-          value: "mongodb://mongodb-service:27017"
+          value: "mongodb://admin:password123@mongodb-service:27017/taskdb?authSource=admin"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-service
+spec:
+  selector:
+    app: task-service
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer
 ```
 
 #### 🔄 Database Scaling
 - **Read Replicas**: MongoDB read replicas for read-heavy workloads
 - **Sharding**: Horizontal partitioning for very large datasets
 - **Indexing**: Proper indexing on frequently queried fields (status, created_at)
+
+#### 📊 Load Balancing
+```yaml
+# docker-compose.yml with load balancer
+version: '3.8'
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - task-service-1
+      - task-service-2
+      - task-service-3
+
+  task-service-1:
+    build: .
+    environment:
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017/taskdb?authSource=admin
+
+  task-service-2:
+    build: .
+    environment:
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017/taskdb?authSource=admin
+
+  task-service-3:
+    build: .
+    environment:
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017/taskdb?authSource=admin
+```
+
+## 🔄 Inter-Service Communication
+
+### 👥 Adding a User Service
+
+When extending the system with additional microservices (e.g., User Service), several communication patterns can be employed:
+
+#### 1️⃣ REST API Communication
+```go
+// User service client
+type UserServiceClient struct {
+    baseURL string
+    client  *http.Client
+}
+
+func (c *UserServiceClient) GetUser(userID string) (*User, error) {
+    resp, err := c.client.Get(fmt.Sprintf("%s/users/%s", c.baseURL, userID))
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+    
+    var user User
+    if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+        return nil, err
+    }
+    return &user, nil
+}
+```
+
+#### 2️⃣ gRPC Communication
+```protobuf
+syntax = "proto3";
+
+service UserService {
+    rpc GetUser(GetUserRequest) returns (GetUserResponse);
+    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+}
+
+message GetUserRequest {
+    string user_id = 1;
+}
+
+message GetUserResponse {
+    User user = 1;
+}
+```
+
+#### 3️⃣ Event-Driven Communication
+```go
+// Task created event
+type TaskCreatedEvent struct {
+    TaskID    string    `json:"task_id"`
+    UserID    string    `json:"user_id"`
+    Title     string    `json:"title"`
+    CreatedAt time.Time `json:"created_at"`
+}
+
+// Publish event after task creation
+func (s *TaskService) CreateTask(ctx context.Context, userID, title, description string) (*domain.Task, error) {
+    task := &domain.Task{
+        ID:          uuid.New().String(),
+        UserID:      userID,
+        Title:       title,
+        Description: description,
+        Status:      "pending",
+        CreatedAt:   time.Now(),
+    }
+    
+    if err := s.repo.Create(ctx, task); err != nil {
+        return nil, err
+    }
+    
+    // Publish event
+    event := TaskCreatedEvent{
+        TaskID:    task.ID,
+        UserID:    task.UserID,
+        Title:     task.Title,
+        CreatedAt: task.CreatedAt,
+    }
+    s.eventPublisher.Publish("task.created", event)
+    
+    return task, nil
+}
+```
+
+### 🔄 Communication Patterns
+
+1. **Synchronous (REST/gRPC)** ⚡: For real-time data requirements
+2. **Asynchronous (Message Queues)** 📨: For eventual consistency and loose coupling
+3. **Event Sourcing** 📊: For audit trails and complex business workflows
+
+### 🔍 Service Discovery
+
+For production deployments, implement service discovery:
+
+```go
+// Service registry interface
+type ServiceRegistry interface {
+    Register(serviceName, address string) error
+    Discover(serviceName string) ([]string, error)
+    Health(serviceName string) error
+}
+
+// Consul implementation
+type ConsulRegistry struct {
+    client *consulapi.Client
+}
+```
+
+## 🎯 Quick Reference
+
+### Essential Commands
+```bash
+# Start with Docker (recommended)
+docker-compose up -d
+
+# Manual start
+export MONGO_URI="mongodb://localhost:27017/taskdb"
+go run cmd/server/main.go
+
+# Test the API
+curl http://localhost:8080/tasks
+
+# Stop Docker services
+docker-compose down
+```
+
+### Key Features
+- ✅ Full CRUD operations
+- 🔄 Status management (pending, in_progress, completed)
+- 📄 Pagination and filtering
+- 🎲 Random task generation
+- 🐳 Docker containerization
+- 🏗️ Microservices architecture
+- 📊 Production-ready scaling options
