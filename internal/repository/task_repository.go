@@ -21,7 +21,7 @@ type TaskRepository interface {
 }
 
 // InMemoryTaskRepository implements TaskRepository interface with in-memory storage
-type InMemoryTaskRepository struct {}
+type InMemoryTaskRepository struct{}
 
 // NewInMemoryTaskRepository creates a new instance of InMemoryTaskRepository
 func NewInMemoryTaskRepository() *InMemoryTaskRepository {
@@ -48,8 +48,8 @@ func (r *InMemoryTaskRepository) Create(ctx context.Context, task *domain.Task) 
 func (r *InMemoryTaskRepository) List(ctx context.Context) ([]*domain.Task, error) {
 	cursor, err := tasksDB.Find(ctx, bson.M{})
 	if err != nil {
-		log.Println("Oops something went wrong")
-		return nil, err
+		log.Println(err)
+		return nil, domain.ErrTaskNotFound
 	}
 	var tasks []*domain.Task
 	defer cursor.Close(ctx)
@@ -70,10 +70,9 @@ func (r *InMemoryTaskRepository) List(ctx context.Context) ([]*domain.Task, erro
 
 func (r *InMemoryTaskRepository) GetTaskByID(ctx context.Context, taskID string) (*domain.Task, error) {
 	var result *domain.Task
-	err := tasksDB.FindOne(ctx, bson.D{{Key: "id", Value: taskID}}).Decode(&result)
-	if err != nil {
+	if err := tasksDB.FindOne(ctx, bson.D{{Key: "id", Value: taskID}}).Decode(&result); err != nil {
 		log.Println(err)
-		return nil, err
+		return nil, domain.ErrTaskNotFound
 	}
 	return result, nil
 }
